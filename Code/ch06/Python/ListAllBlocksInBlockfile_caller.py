@@ -1,5 +1,7 @@
 import os
-from BlockFileInfoFromBlockIndex import blocks_path_g, block_db_g, getBlockFileIndex
+from BlockFileInfoFromBlockIndex import blocks_path_g
+from BlockFileInfoFromBlockIndex import block_db_g
+from BlockFileInfoFromBlockIndex import getBlockFileIndex
 from ListAllBlocksInBlockfile import parseSerialisedBlock
 
 if __name__ == '__main__':

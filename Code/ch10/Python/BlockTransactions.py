@@ -1,6 +1,7 @@
 import mmap
 from CoinbaseTransaction import getVarInt
 
+
 def getTransactionInfo(blk_m: mmap):
     tx = {}
     tx['version'] = blk_m.read(4)[::-1].hex()
@@ -9,7 +10,8 @@ def getTransactionInfo(blk_m: mmap):
     for i in range(tx['inp_cnt']):
         inp = {}
         inp['prev_tx_hash'] = blk_m.read(32)[::-1].hex()
-        inp['prev_tx_out_index'] = int.from_bytes(blk_m.read(4), byteorder='little')
+        inp['prev_tx_out_index'] = int.from_bytes(
+            blk_m.read(4), byteorder='little')
         inp['bytes_scriptsig'] = getVarInt(blk_m)
         inp['scriptsig'] = blk_m.read(inp['bytes_scriptsig']).hex()
         inp['sequence'] = int.from_bytes(blk_m.read(4), byteorder='little')

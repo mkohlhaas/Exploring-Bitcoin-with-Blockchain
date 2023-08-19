@@ -1,51 +1,58 @@
 import mmap
 import struct
-from ecdsa import SigningKey, SECP256k1 
-from ecdsa.util  import sigencode_der_canonize 
+from ecdsa import SigningKey, SECP256k1
+from ecdsa.util import sigencode_der_canonize
 from PublicKey import base58checkDecode, privkeyWif2Hex, privkeyWif2pubkey
 from PrivateKey import hash256
 from ParseScript import OP_PUSHDATA1, OP_PUSHDATA2, OP_PUSHDATA4
-from ParseScriptSig import SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ALL, SIGHASH_ANYONECANPAY
+from ParseScriptSig import SIGHASH_NONE
+from ParseScriptSig import SIGHASH_SINGLE
+from ParseScriptSig import SIGHASH_ANYONECANPAY
 from BlockTransactions import getTransactionInfo
 
 OP_RETURN = 0x6a
 
-def getExecutionScript(txn_struct: dict, inp_index: int): 
-    inp = txn_struct['inputs'][inp_index] 
-    script_type = inp['script_type'] 
-    if script_type[:4] == 'P2SH': 
-        script_b = bytes.fromhex(inp['redeem_script']) 
-    elif script_type == 'P2PKH': 
-        script_b = bytes.fromhex(inp['script_pubkey']) 
-    return script_b 
+
+def getExecutionScript(txn_struct: dict, inp_index: int):
+    inp = txn_struct['inputs'][inp_index]
+    script_type = inp['script_type']
+    if script_type[:4] == 'P2SH':
+        script_b = bytes.fromhex(inp['redeem_script'])
+    elif script_type == 'P2PKH':
+        script_b = bytes.fromhex(inp['script_pubkey'])
+    return script_b
+
 
 def getScriptPubkeyP2PKH(address: str):
     pkh_b = address2PubkeyHash(address)
     pkhSize_b = encodePushdata(len(pkh_b))
     scriptPubkey_b = bytes([OP_DUP, OP_HASH160]) \
-                        + pkhSize_b + pkh_b \
-                        + bytes([OP_EQUALVERIFY]) \
-                        + bytes([OP_CHECKSIG])
+        + pkhSize_b + pkh_b \
+        + bytes([OP_EQUALVERIFY]) \
+        + bytes([OP_CHECKSIG])
     return scriptPubkey_b
+
 
 def getScriptPubkeyP2SH(address: str):
     sh_b = address2PubkeyHash(address)
     shSize_b = encodePushdata(len(sh_b))
     scriptPubkey_b = bytes([OP_HASH160]) \
-                    + shSize_b \
-                    + sh_b \
-                    + bytes([OP_EQUAL])
+        + shSize_b \
+        + sh_b \
+        + bytes([OP_EQUAL])
     return scriptPubkey_b
 
+
 def getScriptPubkeyFromAddress(address: str):
-    pkh_b = address2PubkeyHash(address)
-    pkhSize_b = encodePushdata(len(pkh_b))
+    # pkh_b = address2PubkeyHash(address)
+    # pkhSize_b = encodePushdata(len(pkh_b))
     script_type = getScriptTypeFromAddress(address)
     if script_type == 'P2PKH':
         scriptPubkey_b = getScriptPubkeyP2PKH(address)
     elif script_type == 'P2SH':
         scriptPubkey_b = getScriptPubkeyP2SH(address)
     return scriptPubkey_b
+
 
 def getSequence(txn_struct: dict, i: int):
     inp = txn_struct['inputs'][i]
@@ -64,43 +71,48 @@ def getSequence(txn_struct: dict, i: int):
             sequence_b = bytes([0xff, 0xff, 0xff, 0xff])
     return sequence_b
 
-def createVarInt(i: int): 
-    if i < 0xfd: 
-        return bytes([i]) 
-    elif i < 0xffff: 
-        return b'\xfd' + struct.pack('<H', i) 
-    elif i < 0xffffffff: 
-        return b'\xfe' + struct.pack('<L', i) 
-    elif i < 0xffffffffffffffff: 
-        return b'\xff' + struct.pack('<Q', i) 
 
-def address2PubkeyHash(address: str): 
-    pkh = base58checkDecode(address) 
-    return pkh 
+def createVarInt(i: int):
+    if i < 0xfd:
+        return bytes([i])
+    elif i < 0xffff:
+        return b'\xfd' + struct.pack('<H', i)
+    elif i < 0xffffffff:
+        return b'\xfe' + struct.pack('<L', i)
+    elif i < 0xffffffffffffffff:
+        return b'\xff' + struct.pack('<Q', i)
 
-def encodePushdata(length: int): 
-    if length <= 0x4b: 
-        return bytes([length]) 
-    if length <= 0xff: 
-        return bytes([OP_PUSHDATA1, length]) 
-    if length <= 0xffff: 
-        return bytes([OP_PUSHDATA2]) + struct.pack('<H', length) 
-    if length <= 0xffffffff: 
-        return bytes([OP_PUSHDATA4]) + struct.pack('<L', length) 
 
-def getScriptTypeFromAddress(address: str): 
-    if address[0] in ['m', 'n'] or address[0] == '1': 
-        return "P2PKH" 
-    elif address[0] == '2' or address[0] == '3': 
-        return "P2SH" 
+def address2PubkeyHash(address: str):
+    pkh = base58checkDecode(address)
+    return pkh
 
-OP_0 = 0x00 
-OP_DUP = 0x76 
-OP_EQUAL = 0x87 
-OP_EQUALVERIFY = 0x88 
-OP_HASH160 = 0xa9 
-OP_CHECKSIG = 0xac 
-OP_CHECKMULTISIG = 0xae 
+
+def encodePushdata(length: int):
+    if length <= 0x4b:
+        return bytes([length])
+    if length <= 0xff:
+        return bytes([OP_PUSHDATA1, length])
+    if length <= 0xffff:
+        return bytes([OP_PUSHDATA2]) + struct.pack('<H', length)
+    if length <= 0xffffffff:
+        return bytes([OP_PUSHDATA4]) + struct.pack('<L', length)
+
+
+def getScriptTypeFromAddress(address: str):
+    if address[0] in ['m', 'n'] or address[0] == '1':
+        return "P2PKH"
+    elif address[0] == '2' or address[0] == '3':
+        return "P2SH"
+
+
+OP_0 = 0x00
+OP_DUP = 0x76
+OP_EQUAL = 0x87
+OP_EQUALVERIFY = 0x88
+OP_HASH160 = 0xa9
+OP_CHECKSIG = 0xac
+OP_CHECKMULTISIG = 0xae
 
 OP_2 = 0x52
 OP_IF = 0x63
@@ -112,6 +124,7 @@ OP_DROP = 0x75
 OP_SHA256 = 0xa8
 OP_CHECKSIG = 0xac
 
+
 def createSignaturePreimage(txn_struct: dict,
                             script_b: bytes,
                             inp_index: int):
@@ -120,7 +133,7 @@ def createSignaturePreimage(txn_struct: dict,
     hashtype = txn_struct['inputs'][inp_index]['hash_type']
     if hashtype & SIGHASH_ANYONECANPAY:
         preimage_b += createVarInt(1)
-        inputs = [inp_index] # only current input is processed
+        inputs = [inp_index]  # only current input is processed
     else:
         preimage_b += createVarInt(txn_struct['input_count'])
         inputs = range(txn_struct['input_count'])
@@ -155,7 +168,7 @@ def createSignaturePreimage(txn_struct: dict,
                 if outp['script_type'] == 'OP_RETURN':
                     content_b = bytes.fromhex(outp['content_hash256'])
                     scriptPubkey_b = bytes([OP_RETURN]) \
-                                        + getWithPushdata(content_b)
+                        + getWithPushdata(content_b)
                 else:
                     scriptPubkey_b = \
                         getScriptPubkeyFromAddress(outp['address'])
@@ -165,12 +178,14 @@ def createSignaturePreimage(txn_struct: dict,
     preimage_b += struct.pack('<L', hashtype)
     return preimage_b
 
+
 OP_FALSE = 0x00
 OP_TRUE = 0x51
 
+
 def createScriptSigForCond(signgrp: list,
-                            script_b: bytes,
-                            cond: bool):
+                           script_b: bytes,
+                           cond: bool):
     if cond:
         scriptSig_b = bytes([OP_0])
         for sign_b in signgrp:
@@ -183,10 +198,11 @@ def createScriptSigForCond(signgrp: list,
         scriptSig_b += encodePushdata(len(script_b)) + script_b
     return scriptSig_b
 
+
 def createScriptSigWithSecret(signgrp: list,
-                                script_b: bytes,
-                                secret: str,
-                                cond: bool):
+                              script_b: bytes,
+                              secret: str,
+                              cond: bool):
     if cond:
         scriptSig_b = getWithPushdata(signgrp[0])
         secret_b = secret.encode('utf-8')
@@ -198,28 +214,31 @@ def createScriptSigWithSecret(signgrp: list,
     scriptSig_b += getWithPushdata(script_b)
     return scriptSig_b
 
+
 def createScriptSigForRelTimeLock(signgrp: list,
-                                    script_b: bytes):
+                                  script_b: bytes):
     scriptSig_b = getWithPushdata(signgrp[0])
     scriptSig_b += getWithPushdata(script_b)
     return scriptSig_b
 
-def signMessage(preimage_b: bytes, 
-                privkey_wif: str, 
-                hash_type: int): 
-    hash_preimage = hash256(preimage_b) 
-    privkey_s, network, compress = privkeyWif2Hex(privkey_wif) 
-    if privkey_s.__len__() % 2 == 1: 
-        privkey_s = "0{}".format(privkey_s) 
-    if compress == True: 
-        privkey_b = bytes.fromhex(privkey_s)[:-1] 
-    else: 
-        privkey_b = bytes.fromhex(privkey_s) 
-    sk = SigningKey.from_string(privkey_b, curve=SECP256k1) 
-    sig_b = sk.sign_digest(hash_preimage, 
-                    sigencode=sigencode_der_canonize) \
-                + bytes([hash_type]) 
-    return sig_b 
+
+def signMessage(preimage_b: bytes,
+                privkey_wif: str,
+                hash_type: int):
+    hash_preimage = hash256(preimage_b)
+    privkey_s, network, compress = privkeyWif2Hex(privkey_wif)
+    if privkey_s.__len__() % 2 == 1:
+        privkey_s = "0{}".format(privkey_s)
+    if compress:
+        privkey_b = bytes.fromhex(privkey_s)[:-1]
+    else:
+        privkey_b = bytes.fromhex(privkey_s)
+    sk = SigningKey.from_string(privkey_b, curve=SECP256k1)
+    sig_b = sk.sign_digest(hash_preimage,
+                           sigencode=sigencode_der_canonize) \
+        + bytes([hash_type])
+    return sig_b
+
 
 def updateTxnStructInput(txn_struct: dict, index: int):
     txn_s = txn_struct['inputs'][index]['input_txn']
@@ -234,6 +253,7 @@ def updateTxnStructInput(txn_struct: dict, index: int):
         txn_input['scriptsig'] = inp['inputs'][0]['scriptsig']
     return txn_struct
 
+
 def getSignaturesAndExecScripts(txn_struct: dict):
     signgrp_l = []
     script_l = []
@@ -246,8 +266,8 @@ def getSignaturesAndExecScripts(txn_struct: dict):
         else:
             script_b = getExecutionScript(txn_struct, inp_index)
             preimage_b = createSignaturePreimage(txn_struct,
-                                                script_b,
-                                                inp_index)
+                                                 script_b,
+                                                 inp_index)
             signgrp = []
             for privkey in inp['privkeys']:
                 hashtype = inp['hash_type']
@@ -257,9 +277,11 @@ def getSignaturesAndExecScripts(txn_struct: dict):
             script_l.append(script_b)
     return txn_struct, signgrp_l, script_l
 
+
 def getWithPushdata(data_b: bytes):
     pushdata_b = encodePushdata(len(data_b))
     return pushdata_b + data_b
+
 
 def createScriptSigForMultiSig(signgrp: list, script_b: bytes):
     scriptSig_b = bytes([OP_0])
@@ -268,22 +290,24 @@ def createScriptSigForMultiSig(signgrp: list, script_b: bytes):
     scriptSig_b += getWithPushdata(script_b)
     return scriptSig_b
 
+
 def createScriptSigForP2PKH(txn_input: dict, signgrp: list):
-    sign_b = signgrp[0] # it's not a group.. just one signature
+    sign_b = signgrp[0]  # it's not a group.. just one signature
     scriptSig_b = getWithPushdata(sign_b)
     privkey = txn_input['privkeys'][0]
     pubkey_b = privkeyWif2pubkey(privkey)
     scriptSig_b += getWithPushdata(pubkey_b)
     return scriptSig_b
 
+
 def createSignedInput(txn_input: dict,
-                        signgrp,
-                        script_b: bytes):
+                      signgrp,
+                      script_b: bytes):
     prevtxn = txn_input['prevtxn']
     prevtx_rb = bytes.fromhex(prevtxn)[::-1]
     prevtxnindex = txn_input['prevtxnindex']
     sgntxnin_b = prevtx_rb + struct.pack('<L', prevtxnindex)
-    if 'input_txn' in  txn_input: #added
+    if 'input_txn' in txn_input:  # added
         scriptSig = txn_input['scriptsig']
         scriptSig_b = bytes.fromhex(scriptSig)
     elif txn_input['script_type'] == 'P2SH_Multisig':
@@ -292,26 +316,29 @@ def createSignedInput(txn_input: dict,
         scriptSig_b = createScriptSigForRelTimeLock(signgrp, script_b)
     elif txn_input['script_type'] == 'P2SH_Condition':
         scriptSig_b = createScriptSigForCond(signgrp,
-                            script_b,
-                            txn_input['condition'])
+                                             script_b,
+                                             txn_input['condition'])
     elif txn_input['script_type'] == 'P2SH_WithSecret':
         if txn_input['condition']:
             scriptSig_b = createScriptSigWithSecret(signgrp,
-                                script_b,
-                                txn_input['secret'], True)
+                                                    script_b,
+                                                    txn_input['secret'], True)
         else:
             scriptSig_b = createScriptSigWithSecret(signgrp,
-                                script_b, '', False)
+                                                    script_b, '', False)
     elif txn_input['script_type'] == 'P2PKH':
         scriptSig_b = createScriptSigForP2PKH(txn_input, signgrp)
     sgntxnin_b += createVarInt(len(scriptSig_b)) + scriptSig_b
     return sgntxnin_b
 
 # In P2PKH script scriptSig is signature + pubkey
+
+
 def scriptSigFromSignNPubkey(sign_b: bytes, pubkey_b: bytes):
     scriptSig_b = getWithPushdata(sign_b)
     scriptSig_b += getWithPushdata(pubkey_b)
     return scriptSig_b
+
 
 def createSignedTransaction(txn_struct: dict,
                             signgrp_l: list,
@@ -322,8 +349,8 @@ def createSignedTransaction(txn_struct: dict,
     for i in range(txn_struct['input_count']):
         txn_input = txn_struct['inputs'][i]
         sgntxn_b += createSignedInput(txn_input,
-                                            signgrp_l[i],
-                                            script_l[i])
+                                      signgrp_l[i],
+                                      script_l[i])
         sgntxn_b += getSequence(txn_struct, i)
     sgntxn_b += createVarInt(txn_struct['out_count'])
     for out in range(txn_struct['out_count']):
@@ -336,10 +363,10 @@ def createSignedTransaction(txn_struct: dict,
             if outp['script_type'] == 'OP_RETURN':
                 content_b = bytes.fromhex(outp['content_hash256'])
                 scriptPubkey_b = bytes([OP_RETURN]) \
-                                    + getWithPushdata(content_b)
+                    + getWithPushdata(content_b)
             else:
                 scriptPubkey_b =  \
-                        getScriptPubkeyFromAddress(outp['address'])
+                    getScriptPubkeyFromAddress(outp['address'])
             sgntxn_b += createVarInt(len(scriptPubkey_b))
             sgntxn_b += scriptPubkey_b
     sgntxn_b += struct.pack('<L', txn_struct['locktime'])

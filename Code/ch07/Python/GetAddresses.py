@@ -1,31 +1,36 @@
 import socket
 import mmap
+from BroadcastBlockSendHeaders import createHeadersPayload
 from Utils import getVarInt, flog
 from CreateMessage import createMessage
-from EstablishBitcoinConnection import parseIPAddress, \
-                                checkMessage, \
-                                parseVersionPayload, \
-                                parseMsgHdr, \
-                                establishConnection
 from PingPong import createPongPayload
+from EstablishBitcoinConnection import parseIPAddress
+from EstablishBitcoinConnection import checkMessage
+from EstablishBitcoinConnection import parseVersionPayload
+from EstablishBitcoinConnection import parseMsgHdr
+from EstablishBitcoinConnection import establishConnection
 
-def parsePingPongPayload(payload_m: mmap, payloadlen = 0):
+
+def parsePingPongPayload(payload_m: mmap, payloadlen=0):
     payload = {}
     payload['nonce'] = int.from_bytes(payload_m.read(8), byteorder='little')
     return payload
 
-def parseAddrPayload(payload_m: mmap, payloadlen = 0): 
-    payload = {} 
-    payload['count'] = getVarInt(payload_m) 
-    payload['addrs'] = [] 
-    for i in range(payload['count']): 
-        addr = {} 
-        addr['timestamp'] = int.from_bytes(payload_m.read(4), byteorder='little') 
-        addr['addr'] = parseIPAddress(payload_m) 
-        payload['addrs'].append(addr) 
-    return payload 
 
-def parseGetBlocksGetHeadersPayload(payload_m: mmap, payloadlen = 0):
+def parseAddrPayload(payload_m: mmap, payloadlen=0):
+    payload = {}
+    payload['count'] = getVarInt(payload_m)
+    payload['addrs'] = []
+    for i in range(payload['count']):
+        addr = {}
+        addr['timestamp'] = int.from_bytes(
+            payload_m.read(4), byteorder='little')
+        addr['addr'] = parseIPAddress(payload_m)
+        payload['addrs'].append(addr)
+    return payload
+
+
+def parseGetBlocksGetHeadersPayload(payload_m: mmap, payloadlen=0):
     payload = {}
     payload['version'] = int.from_bytes(payload_m.read(4), byteorder='little')
     payload['hash count'] = getVarInt(payload_m)
@@ -36,31 +41,33 @@ def parseGetBlocksGetHeadersPayload(payload_m: mmap, payloadlen = 0):
     payload['hash_stop'] = payload_m.read(32)[::-1].hex()
     return payload
 
+
 MSGHDR_SIZE = 24
 
 CMD_FN_MAP = {
     'version': parseVersionPayload,
     'addr': parseAddrPayload,
-#    'filterload': parseFilterLoadPayload,
-#    'filteradd': parseFilterAddPayload,
-#    'merkleblock': parseMerkleBlockPayload,
+    #    'filterload': parseFilterLoadPayload,
+    #    'filteradd': parseFilterAddPayload,
+    #    'merkleblock': parseMerkleBlockPayload,
     'ping': parsePingPongPayload,
-#    'pong': parsePingPongPayload,
-#    'feefilter': parseFeeFilterPayload,
-#    'inv': parseInvPayload,
-#    'getdata': parseInvPayload,
-#    'notfound': parseInvPayload,
-#    'tx': parseTxPayload,
-#    'block': parseBlockPayload,
+    #    'pong': parsePingPongPayload,
+    #    'feefilter': parseFeeFilterPayload,
+    #    'inv': parseInvPayload,
+    #    'getdata': parseInvPayload,
+    #    'notfound': parseInvPayload,
+    #    'tx': parseTxPayload,
+    #    'block': parseBlockPayload,
     'getblocks': parseGetBlocksGetHeadersPayload,
     'getheaders': parseGetBlocksGetHeadersPayload,
-#    'headers': parseHeadersPayload,
-#    'reject': parseRejectPayload,
-#    'sendcmpct': parseSendCompactPayload,
-#    'cmpctblock': parseCompactBlockPayload,
-#    'getblocktxn': parseGetBlockTxnPayload,
-#    'blocktxn': parseBlockTxnPayload
+    #    'headers': parseHeadersPayload,
+    #    'reject': parseRejectPayload,
+    #    'sendcmpct': parseSendCompactPayload,
+    #    'cmpctblock': parseCompactBlockPayload,
+    #    'getblocktxn': parseGetBlockTxnPayload,
+    #    'blocktxn': parseBlockTxnPayload
 }
+
 
 def recvAll(s: socket, payloadlen: int):
     payload_b = b''
@@ -72,6 +79,7 @@ def recvAll(s: socket, payloadlen: int):
             break
         length = payloadlen - len(payload_b)
     return payload_b
+
 
 def recvMsg(s: socket):
     global MSGHDR_SIZE, CMD_FN_MAP
@@ -89,33 +97,34 @@ def recvMsg(s: socket):
     print('<== msg = %s' % msg, file=flog)
     return msg
 
-def sendrecvHandler(s: socket, version: int): 
-    if establishConnection(s, version) == False: 
-        print('Establish connection failed', file=flog) 
+
+def sendrecvHandler(s: socket, version: int):
+    if not establishConnection(s, version):
+        print('Establish connection failed', file=flog)
         return
-    # send getaddr message 
-    sndcmd = 'getaddr' 
-    payload = b'' 
-    sndmsg = createMessage(sndcmd, payload) 
-    s.send(sndmsg) 
-    print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog) 
-    while True: 
-        recvmsg = recvMsg(s) 
-        if recvmsg['command'] == 'addr': 
-            break 
-        elif recvmsg['command'] == 'ping': 
-            # send pong message 
-            sndcmd = 'pong' 
-            nonce = recvmsg['payload']['nonce'] 
-            payload = createPongPayload(nonce) 
-        elif recvmsg['command'] == 'getheaders': 
-            # send header message 
-            sndcmd = 'headers' 
-            hashes = recvmsg['payload']['block locator hashes'] 
-            stophash = recvmsg['payload']['hash_stop'] 
-            payload = createHeadersPayload(hashes, stophash) 
-        sndmsg = createMessage(sndcmd, payload) 
-        s.send(sndmsg) 
-        print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog) 
-    if recvmsg['command'] == 'addr': 
-        print('Received Addr', file=flog) 
+    # send getaddr message
+    sndcmd = 'getaddr'
+    payload = b''
+    sndmsg = createMessage(sndcmd, payload)
+    s.send(sndmsg)
+    print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
+    while True:
+        recvmsg = recvMsg(s)
+        if recvmsg['command'] == 'addr':
+            break
+        elif recvmsg['command'] == 'ping':
+            # send pong message
+            sndcmd = 'pong'
+            nonce = recvmsg['payload']['nonce']
+            payload = createPongPayload(nonce)
+        elif recvmsg['command'] == 'getheaders':
+            # send header message
+            sndcmd = 'headers'
+            hashes = recvmsg['payload']['block locator hashes']
+            stophash = recvmsg['payload']['hash_stop']
+            payload = createHeadersPayload(hashes, stophash)
+        sndmsg = createMessage(sndcmd, payload)
+        s.send(sndmsg)
+        print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
+    if recvmsg['command'] == 'addr':
+        print('Received Addr', file=flog)

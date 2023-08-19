@@ -2,6 +2,7 @@ import mmap
 
 flog = open('communication.log', 'wt+')
 
+
 def setVarInt(n: int):
     if n < 0xfd:
         n_h = '%02x' % n
@@ -12,6 +13,7 @@ def setVarInt(n: int):
     else:
         n_h = 'ff%016x' % n
     return bytes.fromhex(n_h)
+
 
 def getVarInt(blk_m: mmap):
     b_cnt_d = {'fd': 2, 'fe': 4, 'ff': 8}

@@ -13,7 +13,7 @@ if __name__ == '__main__':
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     err = s.connect(p)
     print('connected', file=flog)
-    if establishConnection(s, 70015) == False:
+    if not establishConnection(s, 70015):
         print('Establish connection failed', file=flog)
     s.close()
     flog.close()

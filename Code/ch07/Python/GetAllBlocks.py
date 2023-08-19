@@ -5,34 +5,38 @@ import mmap
 from Utils import getVarInt, setVarInt, flog
 from CreateMessage import createMessage
 from CreateVersionPayload import rpc_connection
-from EstablishBitcoinConnection import checkMessage, \
-                                parseVersionPayload, \
-                                parseMsgHdr, \
-                                establishConnection
+from EstablishBitcoinConnection import checkMessage
+from EstablishBitcoinConnection import parseVersionPayload
+from EstablishBitcoinConnection import parseMsgHdr
+from EstablishBitcoinConnection import establishConnection
 from PingPong import sendPongMessage
-from GetAddresses import parseAddrPayload, \
-                        parseGetBlocksGetHeadersPayload, \
-                        parsePingPongPayload
+from GetAddresses import parseAddrPayload
+from GetAddresses import parseGetBlocksGetHeadersPayload
+from GetAddresses import parsePingPongPayload
 
 
 def getGenesisBlockHash():
     blkhash = rpc_connection.getblockhash(0)
     return blkhash
 
-def parseSendCompactPayload(payload_m: mmap, payloadlen = 0):
+
+def parseSendCompactPayload(payload_m: mmap, payloadlen=0):
     payload = {}
     payload['announce'] = int.from_bytes(payload_m.read(1), byteorder='little')
     payload['version'] = int.from_bytes(payload_m.read(8), byteorder='little')
     return payload
 
-def parseFeeFilterPayload(payload_m: mmap, payloadlen = 0):
+
+def parseFeeFilterPayload(payload_m: mmap, payloadlen=0):
     payload = {}
     payload['feerate'] = int.from_bytes(payload_m.read(8), byteorder='little')
     return payload
 
+
 mempool_l_g = []
 
-def parseInvPayload(payload_m: mmap, payloadlen = 0):
+
+def parseInvPayload(payload_m: mmap, payloadlen=0):
     MSG_TX = 1
     payload = {}
     payload['count'] = getVarInt(payload_m)
@@ -54,6 +58,7 @@ def parseInvPayload(payload_m: mmap, payloadlen = 0):
         payload['inventory'].append(inv)
     return payload
 
+
 def parseBlockHeader(payload_m: mmap):
     hdr = {}
     hdr['version'] = int.from_bytes(payload_m.read(4), byteorder='little')
@@ -64,18 +69,8 @@ def parseBlockHeader(payload_m: mmap):
     hdr['nonce'] = payload_m.read(4)[::-1].hex()
     return hdr
 
-def parseGetBlocksGetHeadersPayload(payload_m: mmap, payloadlen = 0):
-    payload = {}
-    payload['version'] = int.from_bytes(payload_m.read(4), byteorder='little')
-    payload['hash count'] = getVarInt(payload_m)
-    payload['block locator hashes'] = []
-    for i in range(payload['hash count']):
-        h = payload_m.read(32)[::-1].hex()
-        payload['block locator hashes'].append(h)
-    payload['hash_stop'] = payload_m.read(32)[::-1].hex()
-    return payload
 
-def parseHeadersPayload(payload_m: mmap, payloadlen = 0):
+def parseHeadersPayload(payload_m: mmap, payloadlen=0):
     payload = {}
     payload['count'] = getVarInt(payload_m)
     payload['headers'] = []
@@ -90,7 +85,8 @@ def parseHeadersPayload(payload_m: mmap, payloadlen = 0):
         payload['headers'].append(hdr)
     return payload
 
-def parseTxPayload(payload_m: mmap, payloadlen = 0):
+
+def parseTxPayload(payload_m: mmap, payloadlen=0):
     payload = {}
     payload['version'] = int.from_bytes(payload_m.read(4), byteorder='little')
     payload['tx_in count'] = getVarInt(payload_m)
@@ -99,7 +95,7 @@ def parseTxPayload(payload_m: mmap, payloadlen = 0):
         txin = {}
         txin['prev_tx_hash'] = payload_m.read(32)[::-1].hex()
         txin['prev_tx_out_index'] = int.from_bytes(payload_m.read(4),
-                byteorder='little')
+                                                   byteorder='little')
         txin['bytes_scriptsig'] = getVarInt(payload_m)
         txin['sriptsig'] = payload_m.read(txin['bytes_scriptsig']).hex()
         txin['sequence'] = payload_m.read(4)[::-1].hex()
@@ -108,19 +104,23 @@ def parseTxPayload(payload_m: mmap, payloadlen = 0):
     payload['tx_out'] = []
     for i in range(payload['tx_out count']):
         txout = {}
-        txout['satoshis'] = int.from_bytes(payload_m.read(8), byteorder='little')
+        txout['satoshis'] = int.from_bytes(
+            payload_m.read(8), byteorder='little')
         txout['bytes_scriptpubkey'] = getVarInt(payload_m)
-        txout['scriptpubkey'] = payload_m.read(txout['bytes_scriptpubkey']).hex()
+        txout['scriptpubkey'] = payload_m.read(
+            txout['bytes_scriptpubkey']).hex()
         payload['tx_out'].append(txout)
     payload['locktime'] = int.from_bytes(payload_m.read(4), byteorder='little')
     return payload
 
-def parseBlockPayload(payload_m: mmap, payloadlen = 0):
+
+def parseBlockPayload(payload_m: mmap, payloadlen=0):
     payload = {}
     payload['version'] = int.from_bytes(payload_m.read(4), byteorder='little')
     payload['prev_blockhash'] = payload_m.read(32)[::-1].hex()
     payload['merkle_root'] = payload_m.read(32)[::-1].hex()
-    payload['timestamp'] = int.from_bytes(payload_m.read(4), byteorder='little')
+    payload['timestamp'] = int.from_bytes(
+        payload_m.read(4), byteorder='little')
     payload['bits'] = payload_m.read(4)[::-1].hex()
     payload['nonce'] = payload_m.read(4)[::-1].hex()
     payload['txn_count'] = getVarInt(payload_m)
@@ -129,31 +129,33 @@ def parseBlockPayload(payload_m: mmap, payloadlen = 0):
         payload['txns'].append(parseTxPayload(payload_m))
     return payload
 
+
 MSGHDR_SIZE = 24
 
 CMD_FN_MAP = {
     'version': parseVersionPayload,
     'addr': parseAddrPayload,
-#    'filterload': parseFilterLoadPayload,
-#    'filteradd': parseFilterAddPayload,
-#    'merkleblock': parseMerkleBlockPayload,
+    #    'filterload': parseFilterLoadPayload,
+    #    'filteradd': parseFilterAddPayload,
+    #    'merkleblock': parseMerkleBlockPayload,
     'ping': parsePingPongPayload,
-#    'pong': parsePingPongPayload,
+    #    'pong': parsePingPongPayload,
     'feefilter': parseFeeFilterPayload,
     'inv': parseInvPayload,
-#    'getdata': parseInvPayload,
-#    'notfound': parseInvPayload,
-#    'tx': parseTxPayload,
+    #    'getdata': parseInvPayload,
+    #    'notfound': parseInvPayload,
+    #    'tx': parseTxPayload,
     'block': parseBlockPayload,
     'getblocks': parseGetBlocksGetHeadersPayload,
     'getheaders': parseGetBlocksGetHeadersPayload,
     'headers': parseHeadersPayload,
-#    'reject': parseRejectPayload,
-#    'sendcmpct': parseSendCompactPayload,
-#    'cmpctblock': parseCompactBlockPayload,
-#    'getblocktxn': parseGetBlockTxnPayload,
-#    'blocktxn': parseBlockTxnPayload
+    #    'reject': parseRejectPayload,
+    #    'sendcmpct': parseSendCompactPayload,
+    #    'cmpctblock': parseCompactBlockPayload,
+    #    'getblocktxn': parseGetBlockTxnPayload,
+    #    'blocktxn': parseBlockTxnPayload
 }
+
 
 def recvAll(s: socket, payloadlen: int):
     payload_b = b''
@@ -165,6 +167,7 @@ def recvAll(s: socket, payloadlen: int):
             break
         length = payloadlen - len(payload_b)
     return payload_b
+
 
 def recvMsg(s: socket):
     global MSGHDR_SIZE, CMD_FN_MAP
@@ -182,12 +185,13 @@ def recvMsg(s: socket):
     print('<== msg = %s' % msg, file=flog)
     return msg
 
+
 def createGetHeadersPayload(hdr_info_l: list, version: int):
     version_b = struct.pack('<L', version)
     blk_locator_hashes_b = b''
     count = 0
     for i in range(len(hdr_info_l) - 1, len(hdr_info_l) - 32, -1):
-        if i < 1: # assuming first block is genesis
+        if i < 1:  # assuming first block is genesis
             break
         blk_locator_hashes_b += bytes.fromhex(hdr_info_l[i]['blkhash'])[::-1]
         count += 1
@@ -196,10 +200,11 @@ def createGetHeadersPayload(hdr_info_l: list, version: int):
     hash_count_b = setVarInt(count)
     stop_hash_b = bytes(32)
     payload = version_b \
-            + hash_count_b \
-            + blk_locator_hashes_b \
-            + stop_hash_b
+        + hash_count_b \
+        + blk_locator_hashes_b \
+        + stop_hash_b
     return payload
+
 
 def waitForBlock(s: socket):
     while True:
@@ -210,12 +215,14 @@ def waitForBlock(s: socket):
             sendPongMessage(s, recvmsg)
     return recvmsg
 
+
 def sendGetHeadersMessage(s: socket, hdr_info_l: list, version: int):
     sndcmd = 'getheaders'
     payload = createGetHeadersPayload(hdr_info_l, version)
     sndmsg = createMessage(sndcmd, payload)
     s.send(sndmsg)
     print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
+
 
 def waitForHeaders(s: socket):
     while True:
@@ -225,6 +232,7 @@ def waitForHeaders(s: socket):
         elif recvmsg['command'] == 'ping':
             sendPongMessage(s, recvmsg)
     return recvmsg
+
 
 def createGetDataPayload(count: int, hash_l: list):
     MSG_BLOCK = 2
@@ -236,12 +244,14 @@ def createGetDataPayload(count: int, hash_l: list):
     payload_b = hash_count_b + hashes_b
     return payload_b
 
+
 def sendGetDataMessage(s: socket, count: int, hash_l: list):
     sndcmd = 'getdata'
     payload = createGetDataPayload(count, hash_l)
     sndmsg = createMessage(sndcmd, payload)
     s.send(sndmsg)
     print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
+
 
 def sendAndHandleGetHeaders(s: socket, hdr_info_l: list, version: int):
     sendGetHeadersMessage(s, hdr_info_l, version)
@@ -256,12 +266,14 @@ def sendAndHandleGetHeaders(s: socket, hdr_info_l: list, version: int):
             waitForBlock(s)
     return recvmsg
 
+
 def sendrecvHeadersData(s: socket, version: int):
     recvmsg = sendAndHandleGetHeaders(s, [], version)
     sendAndHandleGetHeaders(s, recvmsg['payload']['headers'], version)
 
+
 def sendrecvHandler(s: socket, version: int):
-    if establishConnection(s, version) == False:
+    if not establishConnection(s, version):
         print('Establish connection failed', file=flog)
         return
     sendrecvHeadersData(s, version)

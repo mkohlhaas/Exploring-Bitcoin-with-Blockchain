@@ -2,17 +2,20 @@ import hashlib
 import random
 import math
 
-def getChecksumBitCount(mnemonic_length: int): 
-    if (mnemonic_length % 3) != 0: 
-            raise ValueError('Invalid Mnemonic code length') 
-    checksum_bit_count = mnemonic_length // 3 
-    return checksum_bit_count 
 
-def getEntropyBitCount(mnemonic_length: int): 
-    if (mnemonic_length % 3) != 0: 
-        raise ValueError('Invalid Mnemonic code length') 
-    entropy_bit_count = (mnemonic_length * 32) // 3 
-    return entropy_bit_count 
+def getChecksumBitCount(mnemonic_length: int):
+    if (mnemonic_length % 3) != 0:
+        raise ValueError('Invalid Mnemonic code length')
+    checksum_bit_count = mnemonic_length // 3
+    return checksum_bit_count
+
+
+def getEntropyBitCount(mnemonic_length: int):
+    if (mnemonic_length % 3) != 0:
+        raise ValueError('Invalid Mnemonic code length')
+    entropy_bit_count = (mnemonic_length * 32) // 3
+    return entropy_bit_count
+
 
 def getRandomNumberBits(bit_count: int):
     r = random.SystemRandom().randrange(0, 1 << 32)
@@ -24,16 +27,19 @@ def getRandomNumberBits(bit_count: int):
     rand_num_b = h_b[0:byte_count]
     return rand_num_b
 
+
 def getMSBChecksumBits(checksum: int, checksum_bit_count: int):
     msb_checksum = checksum >> (256 - checksum_bit_count)
     return msb_checksum
 
+
 def getEntropyWithChecksum(random_number: int,
-                            msb_checksum: int,
-                            checksum_bit_count: int):
+                           msb_checksum: int,
+                           checksum_bit_count: int):
     shifted_random_number = random_number << checksum_bit_count
     entropy_check_i = shifted_random_number | msb_checksum
     return entropy_check_i
+
 
 def convertIntToBytes(num: int, bit_count: int):
     size_bytes = math.ceil(bit_count / 8)
@@ -41,8 +47,10 @@ def convertIntToBytes(num: int, bit_count: int):
     num_b = bytes.fromhex(num_s)
     return num_b
 
+
 def getChecksum(b: bytes):
     return int.from_bytes(hashlib.sha256(b).digest(), byteorder='big')
+
 
 def getEntropyCheckBits(mnemonic_length: int):
     entropy_bit_count = getEntropyBitCount(mnemonic_length)
@@ -52,16 +60,18 @@ def getEntropyCheckBits(mnemonic_length: int):
     msb_checksum = getMSBChecksumBits(checksum, checksum_bit_count)
     random_number = int.from_bytes(random_number_b, byteorder='big')
     entropy_check_i = getEntropyWithChecksum(random_number, msb_checksum,
-                                                checksum_bit_count)
+                                             checksum_bit_count)
     bit_count = entropy_bit_count + checksum_bit_count
     entropy_check_b = convertIntToBytes(entropy_check_i, bit_count)
     return entropy_check_b
 
+
 def getMnemonicWordList():
     word_list = []
     with open('mnemonic_word_list_english.txt', 'rt') as word_file:
-            word_list = word_file.read().splitlines()
+        word_list = word_file.read().splitlines()
     return word_list
+
 
 def entropyCheckBits2List(entropy_check_b: bytes, size: int):
     selector_int = int.from_bytes(entropy_check_b, byteorder='big')
@@ -72,13 +82,14 @@ def entropyCheckBits2List(entropy_check_b: bytes, size: int):
         size -= 11
     return selector_list[::-1]
 
+
 def getMnemonicWordCodeString(mnemonic_length: int):
     entropy_bit_count = getEntropyBitCount(mnemonic_length)
     checksum_bit_count = getChecksumBitCount(mnemonic_length)
     entropy_check_bit_count = entropy_bit_count + checksum_bit_count
     entropy_check_b = getEntropyCheckBits(mnemonic_length)
     selector_list = entropyCheckBits2List(entropy_check_b,
-                            entropy_check_bit_count)
+                                          entropy_check_bit_count)
     mnemonic_word_list = getMnemonicWordList()
     word_key_list = []
     for selector in selector_list:

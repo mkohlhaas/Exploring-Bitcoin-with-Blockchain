@@ -1,4 +1,6 @@
-from PrepareBlockHeaders import getPreviousBlockHash, calculateNextTargetThreshold, targetThreshold2bits
+from PrepareBlockHeaders import getPreviousBlockHash
+from PrepareBlockHeaders import calculateNextTargetThreshold
+from PrepareBlockHeaders import targetThreshold2bits
 
 if __name__ == '__main__':
     block_hash_b = getPreviousBlockHash()

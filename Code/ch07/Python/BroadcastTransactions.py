@@ -3,20 +3,19 @@ import struct
 import mmap
 from Utils import setVarInt, flog
 from CreateMessage import createMessage
-from EstablishBitcoinConnection import checkMessage, \
-                                parseVersionPayload, \
-                                parseMsgHdr, \
-                                establishConnection
 from PingPong import sendPongMessage
-from GetAddresses import parsePingPongPayload, \
-                                parseAddrPayload, \
-                                parseGetBlocksGetHeadersPayload
-from GetAllBlocks import parseHeadersPayload, \
-                                parseTxPayload, \
-                                parseBlockPayload, \
-                                parseSendCompactPayload, \
-                                parseFeeFilterPayload, \
-                                parseInvPayload
+from EstablishBitcoinConnection import checkMessage
+from EstablishBitcoinConnection import parseVersionPayload
+from EstablishBitcoinConnection import parseMsgHdr
+from EstablishBitcoinConnection import establishConnection
+from GetAddresses import parsePingPongPayload
+from GetAddresses import parseAddrPayload
+from GetAddresses import parseGetBlocksGetHeadersPayload
+from GetAllBlocks import parseHeadersPayload
+from GetAllBlocks import parseTxPayload
+from GetAllBlocks import parseBlockPayload
+from GetAllBlocks import parseFeeFilterPayload
+from GetAllBlocks import parseInvPayload
 
 
 MSGHDR_SIZE = 24
@@ -24,26 +23,27 @@ MSGHDR_SIZE = 24
 CMD_FN_MAP = {
     'version': parseVersionPayload,
     'addr': parseAddrPayload,
-#    'filterload': parseFilterLoadPayload,
-#    'filteradd': parseFilterAddPayload,
-#    'merkleblock': parseMerkleBlockPayload,
+    #    'filterload': parseFilterLoadPayload,
+    #    'filteradd': parseFilterAddPayload,
+    #    'merkleblock': parseMerkleBlockPayload,
     'ping': parsePingPongPayload,
-#    'pong': parsePingPongPayload,
+    #    'pong': parsePingPongPayload,
     'feefilter': parseFeeFilterPayload,
     'inv': parseInvPayload,
-#    'getdata': parseInvPayload,
-#    'notfound': parseInvPayload,
+    #    'getdata': parseInvPayload,
+    #    'notfound': parseInvPayload,
     'tx': parseTxPayload,
     'block': parseBlockPayload,
     'getblocks': parseGetBlocksGetHeadersPayload,
     'getheaders': parseGetBlocksGetHeadersPayload,
     'headers': parseHeadersPayload,
-#    'reject': parseRejectPayload,
-#    'sendcmpct': parseSendCompactPayload,
-#    'cmpctblock': parseCompactBlockPayload,
-#    'getblocktxn': parseGetBlockTxnPayload,
-#    'blocktxn': parseBlockTxnPayload
+    #    'reject': parseRejectPayload,
+    #    'sendcmpct': parseSendCompactPayload,
+    #    'cmpctblock': parseCompactBlockPayload,
+    #    'getblocktxn': parseGetBlockTxnPayload,
+    #    'blocktxn': parseBlockTxnPayload
 }
+
 
 def recvAll(s: socket, payloadlen: int):
     payload_b = b''
@@ -55,6 +55,7 @@ def recvAll(s: socket, payloadlen: int):
             break
         length = payloadlen - len(payload_b)
     return payload_b
+
 
 def recvMsg(s: socket):
     global MSGHDR_SIZE, CMD_FN_MAP
@@ -73,58 +74,65 @@ def recvMsg(s: socket):
     print('<== msg = %s' % msg)
     return msg
 
-def createGetDataTxPayload(payload: dict): 
-    MSG_TX = 1 
-    data_b = b'' 
-    count = 0 
-    for i in range(payload['count']): 
-        # we only request data for tx 
-        if payload['inventory'][i]['type'] == MSG_TX: 
-            type_b = struct.pack('<L', payload['inventory'][i]['type']) 
-            hash_b = bytes.fromhex(payload['inventory'][i]['hash'])[::-1] 
-            data_b += type_b + hash_b 
-            count += 1 
-    count_b = setVarInt(count) 
-    payload_b = count_b + data_b 
-    return count, payload_b 
 
-def waitForInvMessage(s: socket): 
-    while True: 
-        recvmsg = recvMsg(s) 
-        if recvmsg['command'] == 'inv': 
-            break 
-        elif recvmsg['command'] == 'ping': 
-            sendPongMessage(s, recvmsg) 
-    print('Received INV', file=flog) 
-    return recvmsg 
+def createGetDataTxPayload(payload: dict):
+    MSG_TX = 1
+    data_b = b''
+    count = 0
+    for i in range(payload['count']):
+        # we only request data for tx
+        if payload['inventory'][i]['type'] == MSG_TX:
+            type_b = struct.pack('<L', payload['inventory'][i]['type'])
+            hash_b = bytes.fromhex(payload['inventory'][i]['hash'])[::-1]
+            data_b += type_b + hash_b
+            count += 1
+    count_b = setVarInt(count)
+    payload_b = count_b + data_b
+    return count, payload_b
 
-def waitForTxMsg(s: socket): 
-    while True: 
-        recvmsg = recvMsg(s) 
-        if recvmsg['command'] == 'tx': 
-            break 
-        elif recvmsg['command'] == 'ping': 
-            sendPongMessage(s, recvmsg) 
 
-def sendGetDataMessageWithTx(s: socket, recvmsg: dict): 
-    sndcmd = 'getdata' 
-    count, payload = createGetDataTxPayload(recvmsg['payload']) 
-    sndmsg = createMessage(sndcmd, payload) 
-    s.send(sndmsg) 
-    print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog) 
-    return count 
+def waitForInvMessage(s: socket):
+    while True:
+        recvmsg = recvMsg(s)
+        if recvmsg['command'] == 'inv':
+            break
+        elif recvmsg['command'] == 'ping':
+            sendPongMessage(s, recvmsg)
+    print('Received INV', file=flog)
+    return recvmsg
 
-def waitAndHandleInvTxnMessage(s: socket): 
-    recvmsg = waitForInvMessage(s) 
-    count = sendGetDataMessageWithTx(s, recvmsg) 
-    for i in range(count): 
-        waitForTxMsg(s) 
 
-def sendrecvHeadersData(s: socket): 
-    	    waitAndHandleInvTxnMessage(s) 
+def waitForTxMsg(s: socket):
+    while True:
+        recvmsg = recvMsg(s)
+        if recvmsg['command'] == 'tx':
+            break
+        elif recvmsg['command'] == 'ping':
+            sendPongMessage(s, recvmsg)
 
-def sendrecvHandler(s: socket, version: int): 
-    if establishConnection(s, version) == False: 
-        print('Establish connection failed', file=flog) 
-        return 
-    sendrecvHeadersData(s) 
+
+def sendGetDataMessageWithTx(s: socket, recvmsg: dict):
+    sndcmd = 'getdata'
+    count, payload = createGetDataTxPayload(recvmsg['payload'])
+    sndmsg = createMessage(sndcmd, payload)
+    s.send(sndmsg)
+    print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
+    return count
+
+
+def waitAndHandleInvTxnMessage(s: socket):
+    recvmsg = waitForInvMessage(s)
+    count = sendGetDataMessageWithTx(s, recvmsg)
+    for i in range(count):
+        waitForTxMsg(s)
+
+
+def sendrecvHeadersData(s: socket):
+    waitAndHandleInvTxnMessage(s)
+
+
+def sendrecvHandler(s: socket, version: int):
+    if not establishConnection(s, version):
+        print('Establish connection failed', file=flog)
+        return
+    sendrecvHeadersData(s)

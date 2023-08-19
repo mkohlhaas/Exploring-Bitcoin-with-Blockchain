@@ -1,7 +1,8 @@
 from CalculateHashMerkleRoot import buildMerkleRoot
-from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
+from bitcoinrpc.authproxy import AuthServiceProxy
 
-rpc_connection = AuthServiceProxy("http://%s:%s@127.0.0.1:8332"%("test", "test"))
+rpc_connection = AuthServiceProxy(
+    "http://%s:%s@127.0.0.1:8332" % ("test", "test"))
 
 if __name__ == '__main__':
     block_hash = rpc_connection.getblockhash(715735)

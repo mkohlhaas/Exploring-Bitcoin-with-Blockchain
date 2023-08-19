@@ -2,6 +2,7 @@ import mmap
 from CoinbaseTransaction import getVarInt
 from PrivateKey import hash256
 
+
 def getCoinbaseTransactionInfo(txn_m: mmap):
     tx = {}
     startloc = txn_m.tell()
@@ -10,19 +11,22 @@ def getCoinbaseTransactionInfo(txn_m: mmap):
     tx['is_segwit'] = False
     if tx['inp_cnt'] == 0:
         # check segwit flag
-        tx['is_segwit'] = (int.from_bytes(txn_m.read(1), byteorder='little') == 1)
-        if tx['is_segwit'] == True:
+        tx['is_segwit'] = (int.from_bytes(
+            txn_m.read(1), byteorder='little') == 1)
+        if tx['is_segwit']:
             tx['inp_cnt'] = getVarInt(txn_m)
     inp_l = []
     for i in range(tx['inp_cnt']):
         inp = {}
         inp['prev_tx_hash'] = txn_m.read(32)[::-1].hex()
 #        inp['prev_tx_out_index'] = txn_m.read(4)[::-1].hex()
-        inp['prev_tx_out_index'] = int.from_bytes(txn_m.read(4), byteorder='little')
+        inp['prev_tx_out_index'] = int.from_bytes(
+            txn_m.read(4), byteorder='little')
         inp['bytes_coinbase_data'] = getVarInt(txn_m)
         pos = txn_m.tell()
         inp['bytes_height'] = getVarInt(txn_m)
-        inp['height'] = int.from_bytes(txn_m.read(inp['bytes_height']), byteorder='little')
+        inp['height'] = int.from_bytes(txn_m.read(
+            inp['bytes_height']), byteorder='little')
         size = txn_m.tell() - pos
         coinbase_arb_data_size = inp['bytes_coinbase_data'] - size
         inp['coinbase_arb_data'] = txn_m.read(coinbase_arb_data_size).hex()
@@ -42,8 +46,9 @@ def getCoinbaseTransactionInfo(txn_m: mmap):
     curloc = txn_m.tell()
     txn_m.seek(startloc)
     txid_b = txn_m.read(curloc - startloc)
-    if tx['is_segwit'] == True:
-        # if segflag is true than remove segwit marker and flag from txhash calculation
+    if tx['is_segwit']:
+        # if segflag is true than remove segwit marker and
+        # flag from txhash calculation
         txid_b = txid_b[:4] + txid_b[6:]
         for i in range(tx['inp_cnt']):
             tx['inputs'][i]['witness_cnt'] = getVarInt(txn_m)

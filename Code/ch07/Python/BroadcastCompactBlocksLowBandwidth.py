@@ -5,53 +5,54 @@ import mmap
 import siphash
 from Utils import setVarInt, flog
 from CreateMessage import createMessage
-from EstablishBitcoinConnection import checkMessage, \
-                                parseVersionPayload, \
-                                parseMsgHdr, \
-                                establishConnection
+from EstablishBitcoinConnection import checkMessage
+from EstablishBitcoinConnection import parseVersionPayload
+from EstablishBitcoinConnection import parseMsgHdr
+from EstablishBitcoinConnection import establishConnection
 from PingPong import sendPongMessage
-from GetAddresses import parseAddrPayload, \
-                        parsePingPongPayload, \
-                        parseGetBlocksGetHeadersPayload
-from GetAllBlocks import parseHeadersPayload, \
-                                parseTxPayload, \
-                                parseSendCompactPayload, \
-                                getGenesisBlockHash, \
-                                parseBlockPayload, \
-                                parseInvPayload, \
-                                parseFeeFilterPayload, \
-                                mempool_l_g
-from BroadcastBlockSendHeaders import sendSendHeadersMessage, \
-                                    getBlockHashListFromCoreClient
-from BroadcastCompactBlocksHighBandwidth import  createSendCompactPayload, \
-                                                parseCmpctBlockPayload, \
-                                                parseBlockTxnPayload
+from GetAddresses import parseAddrPayload
+from GetAddresses import parsePingPongPayload
+from GetAddresses import parseGetBlocksGetHeadersPayload
+from GetAllBlocks import parseHeadersPayload
+from GetAllBlocks import parseTxPayload
+from GetAllBlocks import parseSendCompactPayload
+from GetAllBlocks import getGenesisBlockHash
+from GetAllBlocks import parseBlockPayload
+from GetAllBlocks import parseInvPayload
+from GetAllBlocks import parseFeeFilterPayload
+from GetAllBlocks import mempool_l_g
+from BroadcastBlockSendHeaders import sendSendHeadersMessage
+from BroadcastBlockSendHeaders import getBlockHashListFromCoreClient
+from BroadcastCompactBlocksHighBandwidth import createSendCompactPayload
+from BroadcastCompactBlocksHighBandwidth import parseCmpctBlockPayload
+from BroadcastCompactBlocksHighBandwidth import parseBlockTxnPayload
 
 MSGHDR_SIZE = 24
 
 CMD_FN_MAP = {
     'version': parseVersionPayload,
     'addr': parseAddrPayload,
-#    'filterload': parseFilterLoadPayload,
-#    'filteradd': parseFilterAddPayload,
-#    'merkleblock': parseMerkleBlockPayload,
+    #    'filterload': parseFilterLoadPayload,
+    #    'filteradd': parseFilterAddPayload,
+    #    'merkleblock': parseMerkleBlockPayload,
     'ping': parsePingPongPayload,
-#    'pong': parsePingPongPayload,
+    #    'pong': parsePingPongPayload,
     'feefilter': parseFeeFilterPayload,
     'inv': parseInvPayload,
-#    'getdata': parseInvPayload,
-#    'notfound': parseInvPayload,
+    #    'getdata': parseInvPayload,
+    #    'notfound': parseInvPayload,
     'tx': parseTxPayload,
     'block': parseBlockPayload,
     'getblocks': parseGetBlocksGetHeadersPayload,
     'getheaders': parseGetBlocksGetHeadersPayload,
     'headers': parseHeadersPayload,
-#    'reject': parseRejectPayload,
+    #    'reject': parseRejectPayload,
     'sendcmpct': parseSendCompactPayload,
     'cmpctblock': parseCmpctBlockPayload,
-#    'getblocktxn': parseGetBlockTxnPayload,
+    #    'getblocktxn': parseGetBlockTxnPayload,
     'blocktxn': parseBlockTxnPayload
 }
+
 
 def recvAll(s: socket, payloadlen: int):
     payload_b = b''
@@ -63,6 +64,7 @@ def recvAll(s: socket, payloadlen: int):
             break
         length = payloadlen - len(payload_b)
     return payload_b
+
 
 def recvMsg(s: socket):
     global MSGHDR_SIZE, CMD_FN_MAP
@@ -81,12 +83,13 @@ def recvMsg(s: socket):
     print('<== msg = %s' % msg)
     return msg
 
+
 def createGetHeadersPayload(hdr_info_l: list, version: int):
     version_b = struct.pack('<L', version)
     blk_locator_hashes_b = b''
     count = 0
     for i in range(len(hdr_info_l) - 1, len(hdr_info_l) - 32, -1):
-        if i < 1: # assuming first block is genesis
+        if i < 1:  # assuming first block is genesis
             break
         blk_locator_hashes_b += bytes.fromhex(hdr_info_l[i]['blkhash'])[::-1]
         count += 1
@@ -95,27 +98,30 @@ def createGetHeadersPayload(hdr_info_l: list, version: int):
     hash_count_b = setVarInt(count)
     stop_hash_b = bytes(32)
     payload = version_b \
-            + hash_count_b \
-            + blk_locator_hashes_b \
-            + stop_hash_b
+        + hash_count_b \
+        + blk_locator_hashes_b \
+        + stop_hash_b
     return payload
 
-def createGetDataPayloadCMPCTBlock(hash_l: list): 
-    MSG_CMPCT_BLOCK = 4 
-    count = len(hash_l) 
-    hash_count_b = setVarInt(count) 
-    hashes_b = b'' 
-    for i in range(count): 
-        type_b = struct.pack('<L', MSG_CMPCT_BLOCK) 
-        hashes_b += type_b + bytes.fromhex(hash_l[i]['blkhash'])[::-1] 
-    payload_b = hash_count_b + hashes_b 
-    return payload_b 
+
+def createGetDataPayloadCMPCTBlock(hash_l: list):
+    MSG_CMPCT_BLOCK = 4
+    count = len(hash_l)
+    hash_count_b = setVarInt(count)
+    hashes_b = b''
+    for i in range(count):
+        type_b = struct.pack('<L', MSG_CMPCT_BLOCK)
+        hashes_b += type_b + bytes.fromhex(hash_l[i]['blkhash'])[::-1]
+    payload_b = hash_count_b + hashes_b
+    return payload_b
+
 
 def createHeadersPayloadNoHeaders():
     cnt_b = setVarInt(0)
     headers_b = b''
     payload = cnt_b + headers_b
     return payload
+
 
 def convertTxIDs2ShortIDs(payload: dict, txid_l: list):
     hdr_nonce_b = bytes.fromhex(payload['hdr_nonce'])
@@ -126,9 +132,10 @@ def convertTxIDs2ShortIDs(payload: dict, txid_l: list):
         sip = siphash.SipHash_2_4(h_b, txid_b)
         siphash_b = sip.digest()
         shortid = siphash_b[:-2].hex()
-        shortid_l = siphash_b[2:].hex()
+        # shortid_l = siphash_b[2:].hex()
         shortids_l.append(shortid)
     return shortids_l
+
 
 def findMissingShortIDs(payload: dict):
     for i in range(len(mempool_l_g)):
@@ -143,13 +150,15 @@ def findMissingShortIDs(payload: dict):
         shortIDs_index_l = []
         for recvd_shortID in payload['shortids']:
             if recvd_shortID not in shortIDs:
-                shortIDs_index_l.append(payload['shortids'].index(recvd_shortID) + 1)
+                shortIDs_index_l.append(
+                    payload['shortids'].index(recvd_shortID) + 1)
         if len(shortIDs_index_l) > 0:
             break
     return shortIDs_index_l
 
+
 def createGetBlockTxnPayload(payload: dict, shortIDs_index_l: list):
-    hdr_b = bytes.fromhex(payload['hdr_nonce'])[0:80] #header
+    hdr_b = bytes.fromhex(payload['hdr_nonce'])[0:80]  # header
     blkhash_b = hashlib.sha256(hashlib.sha256(hdr_b).digest()).digest()
     print('blkhash = %s' % blkhash_b[::-1].hex())
     indexes_len_b = setVarInt(len(shortIDs_index_l))
@@ -158,6 +167,7 @@ def createGetBlockTxnPayload(payload: dict, shortIDs_index_l: list):
         indexes_b += setVarInt(shortIDs_index)
     payload = blkhash_b + indexes_len_b + indexes_b
     return payload
+
 
 def waitForCmpctBlock(s: socket):
     while True:
@@ -168,12 +178,14 @@ def waitForCmpctBlock(s: socket):
             sendPongMessage(s, recvmsg)
     return recvmsg
 
+
 def sendGetBlockTxn(s: socket, recvmsg: dict, shortIDs_index_l):
     sndcmd = 'getblocktxn'
     payload = createGetBlockTxnPayload(recvmsg['payload'], shortIDs_index_l)
     sndmsg = createMessage(sndcmd, payload)
     s.send(sndmsg)
     print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
+
 
 def waitForBlockTxn(s: socket):
     while True:
@@ -183,19 +195,21 @@ def waitForBlockTxn(s: socket):
         elif recvmsg['command'] == 'ping':
             sendPongMessage(s, recvmsg)
 
-def sendSendCompactMessage(s: socket): 
-    # send sendcmpct message for Segwit 
-    sndcmd = 'sendcmpct' 
-    payload = createSendCompactPayload(0, 2) 
-    sndmsg = createMessage(sndcmd, payload) 
-    s.send(sndmsg) 
-    print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog) 
-    # send sendcmpct message for others 
-    sndcmd = 'sendcmpct' 
-    payload = createSendCompactPayload(0, 1) 
-    sndmsg = createMessage(sndcmd, payload) 
-    s.send(sndmsg) 
-    print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog) 
+
+def sendSendCompactMessage(s: socket):
+    # send sendcmpct message for Segwit
+    sndcmd = 'sendcmpct'
+    payload = createSendCompactPayload(0, 2)
+    sndmsg = createMessage(sndcmd, payload)
+    s.send(sndmsg)
+    print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
+    # send sendcmpct message for others
+    sndcmd = 'sendcmpct'
+    payload = createSendCompactPayload(0, 1)
+    sndmsg = createMessage(sndcmd, payload)
+    s.send(sndmsg)
+    print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
+
 
 def sendHeadersMessage(s: socket):
     # send header message
@@ -205,25 +219,28 @@ def sendHeadersMessage(s: socket):
     s.send(sndmsg)
     print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
 
-def sendGetDataMessage(s: socket, recvmsg: dict): 
-    sndcmd = 'getdata' 
-    blk_l = recvmsg['payload']['headers'] 
-    payload = createGetDataPayloadCMPCTBlock(blk_l) 
-    sndmsg = createMessage(sndcmd, payload) 
-    s.send(sndmsg) 
-    print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog) 
 
-def waitAndHandleHeaderResponse(s: socket): 
-    recvmsg = waitForHeaders(s) 
-    sendGetDataMessage(s, recvmsg) 
-    recvmsg = waitForCmpctBlock(s) 
-    shortIDs_index_l = findMissingShortIDs(recvmsg['payload']) 
-    if len(shortIDs_index_l) > 0: 
-        sendGetBlockTxn(s, recvmsg, shortIDs_index_l) 
-        waitForBlockTxn(s) 
+def sendGetDataMessage(s: socket, recvmsg: dict):
+    sndcmd = 'getdata'
+    blk_l = recvmsg['payload']['headers']
+    payload = createGetDataPayloadCMPCTBlock(blk_l)
+    sndmsg = createMessage(sndcmd, payload)
+    s.send(sndmsg)
+    print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
+
+
+def waitAndHandleHeaderResponse(s: socket):
+    recvmsg = waitForHeaders(s)
+    sendGetDataMessage(s, recvmsg)
+    recvmsg = waitForCmpctBlock(s)
+    shortIDs_index_l = findMissingShortIDs(recvmsg['payload'])
+    if len(shortIDs_index_l) > 0:
+        sendGetBlockTxn(s, recvmsg, shortIDs_index_l)
+        waitForBlockTxn(s)
 #    shouldwait = (len(shortIDs_index_l) == 0)
 #    print("waiting" if shouldwait == True else "done")
 #    return shouldwait
+
 
 def waitForHeaders(s: socket):
     while True:
@@ -236,12 +253,14 @@ def waitForHeaders(s: socket):
             sendHeadersMessage(s)
     return recvmsg
 
+
 def sendGetHeadersMessage(s: socket, hdr_info_l: list, version: int):
     sndcmd = 'getheaders'
     payload = createGetHeadersPayload(hdr_info_l, version)
     sndmsg = createMessage(sndcmd, payload)
     s.send(sndmsg)
     print('==> cmd = %s, msg = %s' % (sndcmd, sndmsg.hex()), file=flog)
+
 
 def sendAndHandleGetHeaders(s: socket, hdr_info_l: list, version: int):
     sendGetHeadersMessage(s, hdr_info_l, version)
@@ -253,8 +272,9 @@ def sendAndHandleGetHeaders(s: socket, hdr_info_l: list, version: int):
         blk_l = recvmsg['payload']['headers'][i:lindex]
         sendGetDataMessage(s, lindex - i, blk_l)
         for j in range(i, lindex):
-            waitForBlock(s)
+            waitForBlockTxn(s)
     return recvmsg
+
 
 def sendrecvHeadersData(s: socket, version: int):
     sendSendHeadersMessage(s)
@@ -266,8 +286,9 @@ def sendrecvHeadersData(s: socket, version: int):
 #        shouldwait = \
     waitAndHandleHeaderResponse(s)
 
-def sendrecvHandler(s: socket, version: int): 
-    if establishConnection(s, version) == False: 
-        print('Establish connection failed', file=flog) 
-        return 
-    sendrecvHeadersData(s, version) 
+
+def sendrecvHandler(s: socket, version: int):
+    if not establishConnection(s, version):
+        print('Establish connection failed', file=flog)
+        return
+    sendrecvHeadersData(s, version)

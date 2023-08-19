@@ -16,7 +16,6 @@
 
 import hmac
 import hashlib
-import os
 import struct
 
 
@@ -49,7 +48,7 @@ def pbkdf2(digestmod, password: 'bytes', salt, count, dk_length) -> 'bytes':
             The lenght of the desired key in bytes. This doesn't need
             to be the same size as the hash functions digest size, but
             it makes sense to use a larger digest hash function if your
-            key size is large. 
+            key size is large.
     '''
     def pbkdf2_function(pw, salt, count, i):
         # in the first iteration, the hmac message is the salt
@@ -94,13 +93,13 @@ def test():
     )
     rfc6070_results = (
         b"\x0c\x60\xc8\x0f\x96\x1f\x0e\x71\xf3\xa9\xb5\x24\xaf\x60\x12\x06"
-            b"\x2f\xe0\x37\xa6",
+        b"\x2f\xe0\x37\xa6",
         b"\xea\x6c\x01\x4d\xc7\x2d\x6f\x8c\xcd\x1e\xd9\x2a\xce\x1d\x41\xf0"
-            b"\xd8\xde\x89\x57",
+        b"\xd8\xde\x89\x57",
         b"\x4b\x00\x79\x01\xb7\x65\x48\x9a\xbe\xad\x49\xd9\x26\xf7\x21\xd0"
-            b"\x65\xa4\x29\xc1",
+        b"\x65\xa4\x29\xc1",
         b"\x3d\x2e\xec\x4f\xe4\x1c\x84\x9b\x80\xc8\xd8\x36\x62\xc0\xe4\x4a"
-            b"\x8b\x29\x1a\x96\x4c\xf2\xf0\x70\x38",
+        b"\x8b\x29\x1a\x96\x4c\xf2\xf0\x70\x38",
         b"\x56\xfa\x6a\xa7\x55\x48\x09\x9d\xcc\x37\xd7\xf0\x34\x25\xe0\xc3",
     )
     for v, r in zip(rfc6070_test_vectors, rfc6070_results):
